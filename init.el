@@ -91,8 +91,8 @@
 
 ;; WHICH KEY
 (use-package which-key
+  :diminish
   :init (which-key-mode)
-  :diminish which-key-mode
   :config (setq which-key-idle-delay 0.5))
 
 ;; ALL THE ICONS
@@ -139,6 +139,8 @@
   (evil-mode 1)
   (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
   (define-key evil-insert-state-map (kbd "C-c") 'evil-normal-state)
+  (define-key evil-visual-state-map (kbd "C-g") 'evil-normal-state)
+  (define-key evil-visual-state-map (kbd "C-c") 'evil-normal-state)
   (evil-global-set-key 'motion "j"  'evil-next-visual-line)
   (evil-global-set-key 'motion "k"  'evil-previous-visual-line)
 
@@ -152,6 +154,55 @@
   (evil-collection-init))
 ;; remove something from evil-collection-mode-list if the evil binding or evil collection binding aren't working properly in that mode
 
+(defun egg/org-mode-setup ()
+  (org-indent-mode)
+  (variable-pitch-mode 0)
+  (auto-fill-mode 0)
+  (visual-line-mode 1)
+  (setq evil-auto-indent nil))
+
+(use-package org
+  :hook (org-mode . egg/org-mode-setup)
+  :bind
+  ([remap org-insert-heading-respect-content] . org-meta-return)
+  :config
+  (setq org-ellipsis " ⬎ ")
+  (setq org-hide-emphasis-markers t))
+
+(use-package org-bullets
+  :after org
+  :hook (org-mode . org-bullets-mode))
+
+(defun egg/org-mode-visual-fill ()
+  (setq visual-fill-column-width 100)
+  (setq visual-fill-cetner-text t)
+  (visual-fill-column-mode 1))
+
+(use-package visual-fill-column
+  :hook (org-mode . egg/org-mode-visual-fill))
+
+(dolist (face '((org-level-1 . 1.3)
+		(org-level-2 . 1.2)
+		(org-level-3 . 1.05)
+		(org-level-4 . 1.1)
+		(org-level-5 . 1.1)
+		(org-level-6 . 1.1)
+		(org-level-7 . 1.1)
+		(org-level-8 . 1.1)))
+  (set-face-attribute (car face) nil :font "Iosevka Nerd Font Mono" :weight 'regular :height (cdr face)))
+
+(use-package good-scroll
+  :config
+  (good-scroll-mode 1))
+
+(use-package smartparens
+  :hook (prog-mode)
+  :config (require 'smartparens-config))
+
+;; Check out https://github.com/emacsorphanage/quickrun
+;; Check out https://github.com/rejeep/drag-stuff.el
+;; Check out https://github.com/emacsorphanage/popwin
+
 ;; IDK WHAT THIS STUFF IS
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -160,7 +211,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    '(evil evil-collection gruber-darker-theme ivy ivy-rich nerd-icons
-	  shrink-path)))
+	  org-bullets shrink-path visual-fill-column)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
