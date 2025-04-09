@@ -40,6 +40,8 @@
   (setq-default indent-tabs-mode nil)
   (setq-default tab-width 4)
   (setq-default compilation-scroll-output t)
+  (setq backup-inhibited t)
+  (setq frame-resize-pixelwise t)
   (push '(fullscreen . maximized) default-frame-alist)
 
   :custom
@@ -85,7 +87,6 @@
     "h" 'dired-up-directory
     "l" 'dired-find-file))
 
-(put 'dired-find-alternate-file 'diabled nil)
 (add-hook 'dired-mode-hook (lambda ()
 			    (define-key dired-mode-map (kbd "<return>") 'dired-find-alternate-file)))
 
@@ -126,39 +127,6 @@
   :init
   (savehist-mode))
 
-;; IVY
-;; (use-package ivy
-;;   :diminish ;; Keep ivy minor mode out of the mode line
-;;   :bind ( ;; ("C-s" . swiper)
-;; 	 :map ivy-minibuffer-map
-;; 	 ("TAB" . ivy-alt-done)
-;; 	 ("C-l" . ivy-alt-done)
-;; 	 ("C-j" . ivy-next-line)
-;; 	 ("C-k" . ivy-previous-line)
-;; 	 :map ivy-switch-buffer-map
-;; 	 ("C-k" . ivy-previous-line)
-;; 	 ("C-l" . ivy-done)
-;; 	 ("C-d" . ivy-switch-buffer-kill)
-;; 	 :map ivy-reverse-i-search-map
-;; 	 ("C-k" . ivy-previous-line)
-;; 	 ("C-d" . ivy-reverse-i-search-kill))
-;;   :config
-;;   (ivy-mode 1))
-
-;; (use-package ivy-rich
-;;   :init (ivy-rich-mode 1))
-
-;; COUNSEL
-;; (use-package counsel
-;;   :bind (("M-x" . counsel-M-x)
-;; 	 ("C-x b" . counsel-ibuffer)
-;; 	 ("C-x C-f" . counsel-find-file)
-;; 	 :map minibuffer-local-map
-;; 	 ("C-r" . 'counsel-minibuffer-history)))
-
-;; (global-unset-key (kbd "C-j"))
-;; (global-set-key (kbd "C-j") 'counsel-switch-buffer)
-
 ;; WHICH KEY
 (use-package which-key
   :diminish
@@ -169,6 +137,7 @@
 (use-package all-the-icons)
 
 (use-package all-the-icons-dired
+  :diminish
   :hook (dired-mode . all-the-icons-dired-mode))
 
 ;; HELPFUL
@@ -232,12 +201,43 @@
 ;; ('evil-collection-mode-list)
 ;; remove something from evil-collection-mode-list if the evil binding or evil collection binding aren't working properly in that mode
 
+;; This should really mix the color with white to "lighten it"
+(defun egg/lighten-color (color percent)
+  "Lighten a color by some percentage (0.0-1.0)"
+  (let* ((rgb (color-name-to-rgb color))
+         (r (nth 0 rgb))
+         (g (nth 1 rgb))
+         (b (nth 2 rgb)))
+    (color-rgb-to-hex (+ r (* r percent))
+                      (+ g (* g percent))
+                      (+ b (* b percent))
+                      2)))
+
 (defun egg/org-mode-setup ()
   (org-indent-mode)
   (variable-pitch-mode 1)
   (auto-fill-mode 0)
   (visual-line-mode 1)
+  (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
+  (let ((block-color (egg/lighten-color (face-background 'default) 0.25)))
+    (set-face-attribute 'org-meta-line nil
+                        :foreground block-color
+                        :background block-color)
+    (set-face-attribute 'org-block nil
+                        :slant 'italic
+                        :font egg/default-font
+                        :background block-color)
+    (set-face-attribute 'org-quote nil
+                        :background block-color))
   (setq evil-auto-indent nil))
+
+(defun egg/what-face (pos)
+  "Print the face at point."
+  (interactive "d")
+  (let ((face (or (get-char-property pos 'read-face-name)
+                  (get-char-property pos 'face))))
+    (message "Face: %s" face)))
 
 (use-package org
   :hook
@@ -264,16 +264,11 @@
   :hook (org-mode . org-bullets-mode)
   :config (egg/load-org-bullet-fonts))
 
-;; (defun egg/org-mode-visual-fill ()
-;;   (setq visual-fill-column-width 100)
-;;   (setq visual-fill-center-text t)
-;;   (visual-fill-column-mode 1))
-
-;; TODO: Figure out Visual Fill Column
-;; (use-package visual-fill-column
-;;   :hook (org-mode . egg/org-mode-visual-fill))
-
-;; TODO: Figure out org mode fonts
+(use-package visual-fill-column
+  :config
+  (setq visual-fill-column-width 75)
+  (setq-default visual-fill-column-center-text t)
+  :hook (org-mode . (lambda () (visual-fill-column-mode 1))))
 
 ;; GOOD SCROLL
 (use-package good-scroll
@@ -293,6 +288,7 @@
   (global-unset-key (kbd "C-l"))
   (setq lsp-keymap-prefix "C-l")
   (setq lsp-headerline-breadcrumb-enable nil)
+  (setq lsp-disabled-clients '(semgrep-ls))
   :config
   (lsp-enable-which-key-integration t)
   (add-to-list 'warning-suppress-log-types '(lsp-mode))
@@ -330,13 +326,17 @@
   (customize-set-variable 'svelte-basic-offset 4)
   (customize-set-variable 'svelte-display-submode-name t))
 
+(use-package cc-mode
+  :config
+  (setq-default c-basic-offset 4))
+
 ;; TERMINAL/SHELL
 (use-package vterm
   :commands vterm
   :config
   (setq term-prompt-regexp "-\[.\]- ")
   (setq vterm-shell "zsh")
-  (setq bterm-max-scrollback 100000))
+  (setq bterm-max-scrollback 250000))
 
 (use-package term
   :config
@@ -352,7 +352,7 @@
   (setq dashboard-vertically-center-content t)
   (setq dashboard-startup-banner "~/.config/emacs/emacs.png")
   (setq dashboard-items '((projects   . 3)
-                          (recents   . 3)))
+                          (recents   . 7)))
   (setq dashboard-items-shortcuts '((projects  . "p")
                                     (recents   . "r")))
   (setq dashboard-startupify-list '(dashboard-insert-banner
@@ -387,3 +387,4 @@
 ;; NO MORE CUSTOM BULLSHIT IN MY CONFIG THANKS
 (setq custom-file (locate-user-emacs-file "custom-vars.el"))
 (load custom-file 'noerr 'nomessage)
+(put 'dired-find-alternate-file 'disabled nil)
